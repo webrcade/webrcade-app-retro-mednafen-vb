@@ -34,7 +34,6 @@ export class Emulator extends RetroAppWrapper {
     };
   }
 
-
   createAudioProcessor() {
     return new ScriptAudioProcessor(
       2,
@@ -112,6 +111,22 @@ export class Emulator extends RetroAppWrapper {
     return loop;
   }
 
+  isDefaultSram(data) {
+    if (!data || data.length !== (64 * 1024)) {
+      return false;
+    }
+
+    // Check rest is zero
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] !== 0x00) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+
   async saveState() {
     const { saveStatePath, started } = this;
     const { FS, Module } = window;
@@ -134,10 +149,14 @@ export class Emulator extends RetroAppWrapper {
         s = FS.readFile(path);
         if (s) {
           LOG.info('Found save file: ' + path);
-          files.push({
-            name: this.SAVE_NAME,
-            content: s,
-          });
+          if (!this.isDefaultSram(s)) {
+            files.push({
+              name: this.SAVE_NAME,
+              content: s,
+            });
+          } else {
+            LOG.info('PCE SRAM is default. Skipping write.');
+          }
         }
       } catch (e) {}
 
